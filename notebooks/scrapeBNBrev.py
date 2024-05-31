@@ -32,7 +32,7 @@ def insert_reviews_path(city_url):
     new_url = urlunparse((parsed_url.scheme, parsed_url.netloc, new_path, parsed_url.params, query_params_str, parsed_url.fragment))
     return new_url
 
-def collect_review_urls(city_url, max_pages=5):
+def collect_review_urls(city_url, max_pages=5, max_attempts = 500):
     """ 
     Initiates a Selenium webdriver in Chrome that opens an Airbnb URL of listings in a certain city;
     navigates to each listing on the page (20 total) and collects URLs of specific listings;
@@ -49,6 +49,7 @@ def collect_review_urls(city_url, max_pages=5):
 
     review_urls = []
     current_page = 1
+    attempts = 0
     
     print(f"Total pages to scan: {max_pages}.")
     
@@ -62,19 +63,30 @@ def collect_review_urls(city_url, max_pages=5):
         
         while status == 'Not ready - detecting more listings. . .':
             if len(listings) < 20:
+                if attempts >= max_attempts:
+                    print(f"Reached maximum attempts ({max_attempts}) without finding 20 listings. Exiting loop.")
+                    break  # Exit the inner while loop if max_attempts is reached
                 status = 'Not ready - detecting more listings. . .'
                 WebDriverWait(driver, 60).until(
                     EC.visibility_of_all_elements_located((By.CLASS_NAME, listings_class)))
                 listings = driver.find_elements(By.CLASS_NAME, listings_class)
                 print(status)
-                
+                attempts += 1
+                print(f"Attempt number: {attempts}.")
+
             else:
                 status = f"Ready! {len(listings)} total listings detected on page {current_page}."
                 print(status)
                 
                 if len(listings) > 20:
                     print(f"Estimated {len(listings) - 20} are not valid elements - expect hiccups.")
-                    
+                break
+        if attempts >= max_attempts:
+            print(f"Reached maximum attempts ({max_attempts}) without finding 20 listings. Exiting loop.")
+            break  # Exit loop if maximum attempts reached
+        
+ 
+        current_page += 1                    
         for listing in listings:
             try:
                 driver.execute_script("arguments[0].scrollIntoView();", listing)
@@ -295,3 +307,4 @@ for idx, city_url in enumerate(url_list):
 
     # Save to local directory
     save_to_local(directory, city_name, city_reviews_df)
+    print(f"Saved {city_name} reviews to home directory.")
