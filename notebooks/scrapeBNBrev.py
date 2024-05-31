@@ -1,7 +1,6 @@
 from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
+#from selenium.webdriver.chrome.options import Options
+from selenium.webdriver import FirefoxOptions
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
@@ -42,12 +41,10 @@ def collect_review_urls(city_url, max_pages=5):
     """
     listings_class = "itu7ddv"
 
-    # chrome_options = webdriver.ChromeOptions()
-    # chrome_options.add_argument('--headless')
-    # chrome_options.add_argument('--no-sandbox')
-    # chrome_options.add_argument('--disable-dev-shm-usage')
-    
-    driver = webdriver.Chrome()
+    opts = FirefoxOptions()
+    opts.add_argument("--headless")
+
+    driver = webdriver.Firefox(options=opts)
     driver.get(city_url)
 
     review_urls = []
@@ -96,6 +93,7 @@ def collect_review_urls(city_url, max_pages=5):
 
                 driver.close()
                 driver.switch_to.window(original_window)
+                print(f"Listing captured successfully: {review_url[:50]}...")
                 
             except Exception as e:
                 print(f'Could not access listing: {listing}. Exception: {e}')
@@ -123,12 +121,12 @@ def collect_review_urls(city_url, max_pages=5):
 def review_scraper(review_url):
     """Scrapes reviews from a given Airbnb review URL."""
 
-    chrome_options = webdriver.ChromeOptions()
-    chrome_options.add_argument('--headless')
-    chrome_options.add_argument('--no-sandbox')
-    chrome_options.add_argument('--disable-dev-shm-usage')
-    
-    driver = webdriver.Chrome(options=chrome_options)
+    opts = FirefoxOptions()
+    opts.add_argument("--headless")
+
+    driver = webdriver.Firefox(options=opts)
+    driver.get(city_url)
+
     review_data = []
     
     try:
@@ -223,7 +221,7 @@ def scrapeBNBrevs(city_url):
         if len(reviews) >= max_reviews:
             break
         
-        print(f"Scanning {idx / 100} potential listings.")
+        print(f"Scanning {idx} / 100 potential listings.")
         reviews.extend(review_scraper(url))
         print(f'Updated review count for {city_name}: {len(reviews)} / {max_reviews} max.')
 
@@ -239,36 +237,61 @@ def scrapeBNBrevs(city_url):
     return review_df
 
 # Initialize the Google Cloud Storage client
-storage_client = storage.Client()
+# storage_client = storage.Client()
 
-# Specify the name of your Cloud Storage bucket
-bucket_name = "investmentdata"
+# # Specify the name of your Cloud Storage bucket
+# bucket_name = "investmentdata"
 
-# Iterate over each city URL
+# # Iterate over each city URL
+# for idx, city_url in enumerate(url_list):
+#     city_name = extract_city_from_url(city_url)
+    
+#     print('*'*50)
+#     print(f"{city_name}, {idx} / {len(url_list)} total cities.")
+#     print('*'*50)
+    
+#     # Scrape reviews for the current city
+#     city_reviews_df = scrapeBNBrevs(city_url)
+    
+#     # Specify the filename within the bucket
+#     filename = f"{city_name}_reviews.csv"
+    
+#     # Write the DataFrame to a CSV file-like object
+#     csv_data = city_reviews_df.to_csv(index=False)
+    
+#     # Specify the path to the file within the bucket
+#     blob_path = f"city_reviews/{filename}"
+    
+#     # Upload the file to Cloud Storage
+#     bucket = storage_client.bucket(bucket_name)
+#     blob = bucket.blob(blob_path)
+#     blob.upload_from_string(csv_data, content_type='text/csv')
+    
+#     print('*'*50)
+#     print(f"Saved {city_name} reviews to file: gs://{bucket_name}/{blob_path}")
+#     print('*'*50)
+
+def save_to_local(directory, city_name, city_reviews_df):
+    """Save DataFrame to a local directory on the VM."""
+    # Ensure the directory exists
+    os.makedirs(directory, exist_ok=True)
+
+    # Construct the file path
+    filename = f"{directory}/{city_name}_reviews.csv"
+
+    # Save the DataFrame to a CSV file
+    city_reviews_df.to_csv(filename, index=False)
+
+    print(f"Saved {city_name} reviews to file at {filename}")
+
+# Example usage in your main script
+directory = "/home/castillosam27/city_reviews"
 for idx, city_url in enumerate(url_list):
     city_name = extract_city_from_url(city_url)
-    
-    print('*'*50)
-    print(f"{city_name}, {idx} / {len(url_list)} total cities.")
-    print('*'*50)
-    
+    print(f"Collecting reviews for {city_name}... ({idx + 1} / {len(url_list)})")
+
     # Scrape reviews for the current city
     city_reviews_df = scrapeBNBrevs(city_url)
-    
-    # Specify the filename within the bucket
-    filename = f"{city_name}_reviews.csv"
-    
-    # Write the DataFrame to a CSV file-like object
-    csv_data = city_reviews_df.to_csv(index=False)
-    
-    # Specify the path to the file within the bucket
-    blob_path = f"city_reviews/{filename}"
-    
-    # Upload the file to Cloud Storage
-    bucket = storage_client.bucket(bucket_name)
-    blob = bucket.blob(blob_path)
-    blob.upload_from_string(csv_data, content_type='text/csv')
-    
-    print('*'*50)
-    print(f"Saved {city_name} reviews to file: gs://{bucket_name}/{blob_path}")
-    print('*'*50)
+
+    # Save to local directory
+    save_to_local(directory, city_name, city_reviews_df)
