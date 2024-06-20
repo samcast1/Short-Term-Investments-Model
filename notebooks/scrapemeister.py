@@ -166,6 +166,7 @@ def review_scraper(review_url):
                     })
 
                     reviews_captured += 1
+                    print(".", end="")
 
                 except Exception as e:
                     print(f'Could not extract review data: {e}')
@@ -233,6 +234,8 @@ def save_to_local(directory, city_name, city_reviews_df):
 
 
 directory = "/home/castillosam27/city_reviews"
+
+url_list = url_list[768:] # 280:402, 402:524, 524:646, 646:768, 768:
 for idx, city_url in enumerate(url_list):
     city_name = extract_city_from_url(city_url)
     print(f"Collecting reviews for {city_name}... ({idx + 1} / {len(url_list)})")
@@ -251,4 +254,4 @@ for idx, city_url in enumerate(url_list):
         driver.quit()
 
     except Exception as e:
-        print(f"AThe Webdriver could not be shut down: {e}")
+        print(f"The Webdriver could not be shut down: {e}")
