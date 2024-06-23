@@ -9,11 +9,6 @@ from torch.utils.data import DataLoader
 import os
 import time
 
-num_threads = 8  # Number of CPU cores
-torch.set_num_threads(num_threads)
-os.environ['OMP_NUM_THREADS'] = str(num_threads)
-os.environ['MKL_NUM_THREADS'] = str(num_threads)
-
 print("Loading data and preprocessing...")
 # Load data and preprocess
 file_path = '~/all_reviews.csv'
@@ -46,6 +41,8 @@ X_train, X_test, y_train, y_test = train_test_split(
     random_state=42,
     stratify=reviews_df['label']
 )
+
+torch.set_num_threads(torch.get_num_threads())
 
 # Tokenization
 tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
@@ -95,16 +92,14 @@ class_weights_tensor = torch.tensor([total_samples / class_counts.get(i, 1) for 
 class_weights_tensor = class_weights_tensor / class_weights_tensor.sum()
 
 config = DistilBertConfig.from_pretrained('distilbert-base-uncased', num_labels=3)
-config.num_hidden_layers = 6
-config.dropout = 0.5
-config.attention_dropout= 0.75
+config.num_hidden_layers = 5
 
 
 # Custom model class for handling class weights
 class CustomDistilBERTForSequenceClassification(DistilBertForSequenceClassification):
     def __init__(self, config, class_weights):
         super().__init__(config)
-        self.dropout = torch.nn.Dropout(config.dropout)
+        self.dropout = torch.nn.Dropout(0.1)
         self.classifier = torch.nn.Linear(config.hidden_size, config.num_labels)
         self.class_weights = class_weights  # Store class weights as an attribute
 
@@ -134,20 +129,20 @@ model = CustomDistilBERTForSequenceClassification.from_pretrained('distilbert-ba
 import multiprocessing
 num_cpus = multiprocessing.cpu_count()
 print('Number of cpus for training: ', num_cpus)
-training_args_run5_six_layer = TrainingArguments(
-    output_dir='./results/run5_six_layer',
+training_args_run3 = TrainingArguments(
+    output_dir='./results/run3',
     num_train_epochs=3,
-    per_device_train_batch_size=70,  # Increased batch size
+    per_device_train_batch_size=90,  # Increased batch size
     per_device_eval_batch_size=120,  # Increased batch size
     warmup_steps=500,
-    weight_decay=0.1,
-    logging_dir='./logs/run5_six_layer',
+    weight_decay=0.01,
+    logging_dir='./logs/run3',
     logging_steps=10,  # Reduced logging frequency
     eval_strategy="epoch",
     save_strategy="epoch",
     load_best_model_at_end=True,
     fp16=True,  # Enable mixed-precision training
-    dataloader_num_workers=num_threads,  # Number of worker threads
+    dataloader_num_workers=num_cpus,  # Number of worker threads
 )
 
 
@@ -173,9 +168,9 @@ print("Initializing Trainer...")
 # Trainer initialization
 
 
-trainer_run5_six_layer = Trainer(
+trainer_run3 = Trainer(
     model=model,
-    args=training_args_run5_six_layer,
+    args=training_args_run3,
     train_dataset=train_dataset,
     eval_dataset=test_dataset,
     compute_metrics=compute_metrics,
@@ -183,9 +178,9 @@ trainer_run5_six_layer = Trainer(
 
 # Training and evaluation
 print("Running model training...")
-output = trainer_run5_six_layer.train()
+output = trainer_run3.train()
 print("Evaluating model...")
-eval_result = trainer_run5_six_layer.evaluate()
+eval_result = trainer_run3.evaluate()
 
 print("Training complete. Evaluation results:")
 print(eval_result)
@@ -198,7 +193,7 @@ for key, value in metrics.items():
 
 # Evaluate on the test set and print results
 print("Test evaluation results:")
-test_results = trainer_run5_six_layer.predict(test_dataset)
+test_results = trainer_run3.predict(test_dataset)
 test_metrics = compute_metrics(test_results)
 for key, value in test_metrics.items():
     print(f"{key}: {value}")

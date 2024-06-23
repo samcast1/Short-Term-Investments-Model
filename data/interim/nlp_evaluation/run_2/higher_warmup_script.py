@@ -95,16 +95,14 @@ class_weights_tensor = torch.tensor([total_samples / class_counts.get(i, 1) for 
 class_weights_tensor = class_weights_tensor / class_weights_tensor.sum()
 
 config = DistilBertConfig.from_pretrained('distilbert-base-uncased', num_labels=3)
-config.num_hidden_layers = 6
-config.dropout = 0.5
-config.attention_dropout= 0.75
+config.num_hidden_layers = 5
 
 
 # Custom model class for handling class weights
 class CustomDistilBERTForSequenceClassification(DistilBertForSequenceClassification):
     def __init__(self, config, class_weights):
         super().__init__(config)
-        self.dropout = torch.nn.Dropout(config.dropout)
+        self.dropout = torch.nn.Dropout(0.1)
         self.classifier = torch.nn.Linear(config.hidden_size, config.num_labels)
         self.class_weights = class_weights  # Store class weights as an attribute
 
@@ -134,14 +132,14 @@ model = CustomDistilBERTForSequenceClassification.from_pretrained('distilbert-ba
 import multiprocessing
 num_cpus = multiprocessing.cpu_count()
 print('Number of cpus for training: ', num_cpus)
-training_args_run5_six_layer = TrainingArguments(
-    output_dir='./results/run5_six_layer',
+training_args_run4_higher_warmup = TrainingArguments(
+    output_dir='./results/run4_higher_warmup',
     num_train_epochs=3,
-    per_device_train_batch_size=70,  # Increased batch size
+    per_device_train_batch_size=90,  # Increased batch size
     per_device_eval_batch_size=120,  # Increased batch size
-    warmup_steps=500,
-    weight_decay=0.1,
-    logging_dir='./logs/run5_six_layer',
+    warmup_steps=1000,
+    weight_decay=0.01,
+    logging_dir='./logs/run4_higher_warmup',
     logging_steps=10,  # Reduced logging frequency
     eval_strategy="epoch",
     save_strategy="epoch",
@@ -173,9 +171,9 @@ print("Initializing Trainer...")
 # Trainer initialization
 
 
-trainer_run5_six_layer = Trainer(
+trainer_run4_higher_warmup = Trainer(
     model=model,
-    args=training_args_run5_six_layer,
+    args=training_args_run4_higher_warmup,
     train_dataset=train_dataset,
     eval_dataset=test_dataset,
     compute_metrics=compute_metrics,
@@ -183,9 +181,9 @@ trainer_run5_six_layer = Trainer(
 
 # Training and evaluation
 print("Running model training...")
-output = trainer_run5_six_layer.train()
+output = trainer_run4_higher_warmup.train()
 print("Evaluating model...")
-eval_result = trainer_run5_six_layer.evaluate()
+eval_result = trainer_run4_higher_warmup.evaluate()
 
 print("Training complete. Evaluation results:")
 print(eval_result)
@@ -198,7 +196,7 @@ for key, value in metrics.items():
 
 # Evaluate on the test set and print results
 print("Test evaluation results:")
-test_results = trainer_run5_six_layer.predict(test_dataset)
+test_results = trainer_run4_higher_warmup.predict(test_dataset)
 test_metrics = compute_metrics(test_results)
 for key, value in test_metrics.items():
     print(f"{key}: {value}")
