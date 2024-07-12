@@ -200,9 +200,9 @@ def objective(trial):
         if trial.should_prune():
             raise optuna.exceptions.TrialPruned()
         
-    trainer.train()
-    eval_result = trainer.evaluate()
-    return eval_result['eval_loss']
+    # trainer.train()
+    # eval_result = trainer.evaluate()
+    # return eval_result['eval_loss']
 
 pruner = MedianPruner(n_startup_trials=3, n_warmup_steps=100, interval_steps=20)
 study = optuna.create_study(direction='minimize', pruner=pruner)
