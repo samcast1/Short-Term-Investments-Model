@@ -1,0 +1,12 @@
+Sentiment Analysis Model Metrics
+
+DistilBERT configured in PyTorch
+
+Learning Rate	2.84629e-05
+# Epochs	3
+Dropout Rate	0.07384
+Attention Drop.	0.37841
+# Layers	6
+Weight Decay	1.58100e-05
+Warmup Steps	800
+
